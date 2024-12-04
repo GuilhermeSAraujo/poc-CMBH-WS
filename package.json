@@ -1,0 +1,19 @@
+{
+  "name": "poc-cmbh-ws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@playwright/test": "^1.49.0",
+    "cheerio": "^1.0.0",
+    "puppeteer": "^23.10.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6"
+  }
+}
