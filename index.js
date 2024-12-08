@@ -1,4 +1,5 @@
 import { chromium } from "@playwright/test";
+import fs from "fs";
 
 const url = "https://www.cmbh.mg.gov.br/atividade-legislativa/pesquisar-proposicoes";
 
@@ -6,9 +7,8 @@ async function extractDataFromPage(page) {
   return page.evaluate(() => {
     return Array.from(document.querySelectorAll("ul.lista-pesquisas > li")).map((li) => {
       const title = li.querySelector("h3 span").textContent.trim();
-      const textoInicial = li.querySelector('a[title="Baixar texto inicial"]')?.href || "";
-      const tramitacaoUrl =
-        li.querySelector("span[data-caminho]")?.getAttribute("data-caminho") || "";
+      const initialTextLink = li.querySelector('a[title="Baixar texto inicial"]')?.href || "";
+      const textLink = li.querySelector("span[data-caminho]")?.getAttribute("data-caminho") || "";
 
       // Função auxiliar para extrair texto dos parágrafos
       const getInfo = (label) => {
@@ -30,13 +30,14 @@ async function extractDataFromPage(page) {
 
       return {
         title,
-        textoInicial,
-        tramitacaoUrl,
+        initialTextLink,
+        textLink,
         author: getInfo("Autoria:"),
         summary: getInfo("Ementa:"),
         subject: getInfo("Assunto:"),
         status: getInfo("Situação:"),
         votes: getVotes(),
+        year: "2023",
       };
     });
   });
@@ -52,8 +53,10 @@ async function getAllProposicoes(page) {
     const quantidadeTotal = resumo.split(" ")[13];
     return quantidadeTotal ? parseInt(quantidadeTotal) : 0;
   });
+  console.log("totalItems", totalItems);
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
+  console.log("totalPages", totalPages);
 
   console.log(`Total de itens: ${totalItems}`);
   console.log(`Total de páginas: ${totalPages}`);
@@ -68,10 +71,11 @@ async function getAllProposicoes(page) {
       allData.push(...pageData);
 
       // Se não for a última página, vai para a próxima
+      console.log({ paginaAtual: currentPage, totalPaginas: totalPages });
       if (currentPage < totalPages) {
         // Clica no botão da próxima página
         // await page.click(`a.mudarPagina[href="#inicioResultados"]:text("${currentPage + 1}")`);
-        getByRole("link", { name: ">" }).first();
+        await page.getByRole("link", { name: ">" }).first().click();
 
         // Espera adicional para garantir que o conteúdo carregou
         await page.waitForTimeout(3000);
@@ -118,15 +122,16 @@ async function getAllProposicoes(page) {
     await tipoProposicaoElement.click();
     await tipoProposicaoElement.selectOption({ label: "Projeto de Lei" });
 
-    await page.getByLabel("Ano").fill("2020");
+    await page.getByLabel("Ano").fill("2023");
+    await page.waitForTimeout(1_000);
     await page.getByText("Pesquisar", { exact: true }).click();
-    await page.waitForTimeout(5000);
     // Coleta dados de todas as páginas
+    await page.waitForTimeout(5_000);
+
     const allData = await getAllProposicoes(page);
 
     // Salva os dados em um arquivo
-    const fs = require("fs");
-    fs.writeFileSync("proposicoes.json", JSON.stringify(allData, null, 2));
+    fs.writeFileSync(`ProjetosDeLei2023.json`, JSON.stringify(allData, null, 2));
 
     console.log(`Total de proposições coletadas: ${allData.length}`);
   } catch (error) {
